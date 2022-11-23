@@ -1,14 +1,11 @@
 using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using System;
+
 public class VehicleCamera : MonoBehaviour
 {
-
-
-
-    public Transform target;
+    private Transform _target;
 
     public float smooth = 0.3f;
     public float distance = 5.0f;
@@ -22,140 +19,40 @@ public class VehicleCamera : MonoBehaviour
     public CarUIClass CarUI;
 
 
-
     private float yVelocity = 0.0f;
     private float xVelocity = 0.0f;
-    [HideInInspector]
-    public int Switch;
+    [HideInInspector] public int Switch;
 
     private int gearst = 0;
     private float thisAngle = -150;
     private float restTime = 0.0f;
 
+    private VehicleControl _carScript;
+    private Camera _camera;
 
-    private Rigidbody myRigidbody;
-
-
-
-    private VehicleControl carScript;
-
-
-
-    [System.Serializable]
+    [Serializable]
     public class CarUIClass
     {
-
         public Image tachometerNeedle;
         public Image barShiftGUI;
 
         public Text speedText;
         public Text GearText;
-
     }
 
-
-    
-
-
-    ////////////////////////////////////////////// TouchMode (Control) ////////////////////////////////////////////////////////////////////
-
-
-    private int PLValue = 0;
-
-
-    public void PoliceLightSwitch()
+    private void ShowCarUI()
     {
+        gearst = _carScript.currentGear;
+        CarUI.speedText.text = ((int) _carScript.speed).ToString();
 
-        if (!target.gameObject.GetComponent<PoliceLights>()) return;
-
-        PLValue++;
-
-        if (PLValue > 1) PLValue = 0;
-
-        if (PLValue == 1)
-            target.gameObject.GetComponent<PoliceLights>().activeLight = true;
-
-        if (PLValue == 0)
-            target.gameObject.GetComponent<PoliceLights>().activeLight = false;
-
-
-    }
-
-
-    public void CameraSwitch()
-    {
-        Switch++;
-        if (Switch > cameraSwitchView.Count) { Switch = 0; }
-    }
-
-
-    public void CarAccelForward(float amount)
-    {
-        carScript.accelFwd = amount;
-    }
-
-    public void CarAccelBack(float amount)
-    {
-        carScript.accelBack = amount;
-    }
-
-    public void CarSteer(float amount)
-    {
-        carScript.steerAmount = amount;
-    }
-
-    public void CarHandBrake(bool HBrakeing)
-    {
-        carScript.brake = HBrakeing;
-    }
-
-    public void CarShift(bool Shifting)
-    {
-        carScript.shift = Shifting;
-    }
-
-
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-    
-
-    public void RestCar()
-    {
-
-        if (restTime == 0)
+        if (_carScript.carSetting.automaticGear)
         {
-            myRigidbody.AddForce(Vector3.up * 500000);
-            myRigidbody.MoveRotation(Quaternion.Euler(0, transform.eulerAngles.y, 0));
-            restTime = 2.0f;
-        }
-
-    }
-
-
-
-
-    public void ShowCarUI()
-    {
-
-
-
-        gearst = carScript.currentGear;
-        CarUI.speedText.text = ((int)carScript.speed).ToString();
-
-
-
-
-        if (carScript.carSetting.automaticGear)
-        {
-
-            if (gearst > 0 && carScript.speed > 1)
+            if (gearst > 0 && _carScript.speed > 1)
             {
                 CarUI.GearText.color = Color.green;
                 CarUI.GearText.text = gearst.ToString();
             }
-            else if (carScript.speed > 1)
+            else if (_carScript.speed > 1)
             {
                 CarUI.GearText.color = Color.red;
                 CarUI.GearText.text = "R";
@@ -165,154 +62,85 @@ public class VehicleCamera : MonoBehaviour
                 CarUI.GearText.color = Color.white;
                 CarUI.GearText.text = "N";
             }
-
         }
         else
         {
-
-            if (carScript.NeutralGear)
+            if (_carScript.NeutralGear)
             {
                 CarUI.GearText.color = Color.white;
                 CarUI.GearText.text = "N";
             }
             else
             {
-                if (carScript.currentGear != 0)
+                if (_carScript.currentGear != 0)
                 {
                     CarUI.GearText.color = Color.green;
                     CarUI.GearText.text = gearst.ToString();
                 }
                 else
                 {
-
                     CarUI.GearText.color = Color.red;
                     CarUI.GearText.text = "R";
                 }
             }
-
         }
 
-
-
-
-
-        thisAngle = (carScript.motorRPM / 20) - 175;
+        thisAngle = (_carScript.motorRPM / 20) - 175;
         thisAngle = Mathf.Clamp(thisAngle, -180, 90);
 
         CarUI.tachometerNeedle.rectTransform.rotation = Quaternion.Euler(0, 0, -thisAngle);
-        CarUI.barShiftGUI.rectTransform.localScale = new Vector3(carScript.powerShift / 100.0f, 1, 1);
-
+        CarUI.barShiftGUI.rectTransform.localScale = new Vector3(_carScript.powerShift / 100.0f, 1, 1);
     }
 
 
-
-    void Start()
+    public void Initialize(VehicleControl carScript)
     {
-
-        carScript = (VehicleControl)target.GetComponent<VehicleControl>();
-
-        myRigidbody = target.GetComponent<Rigidbody>();
-
-        cameraSwitchView = carScript.carSetting.cameraSwitchView;
-
+        _carScript = carScript;
+        cameraSwitchView = _carScript.carSetting.cameraSwitchView;
+        _camera = Camera.main;
+        _target = carScript.transform;
     }
-
-
 
 
     void Update()
     {
-
-        if (!target) return;
-
-
-        carScript = (VehicleControl)target.GetComponent<VehicleControl>();
-
-
-
-        if (Input.GetKeyDown(KeyCode.G))
-        {
-            RestCar();
-        }
-
-
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            Application.LoadLevel(Application.loadedLevel);
-        }
-
-
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            PoliceLightSwitch();
-        }
-
-
-        if (restTime!=0.0f)
-        restTime=Mathf.MoveTowards(restTime ,0.0f,Time.deltaTime);
-
-
-
+        if (!_target)
+            return;
 
         ShowCarUI();
-
-        GetComponent<Camera>().fieldOfView = Mathf.Clamp(carScript.speed / 10.0f + 60.0f, 60, 90.0f);
-
-
-
-        if (Input.GetKeyDown(KeyCode.C))
-        {
-            Switch++;
-            if (Switch > cameraSwitchView.Count) { Switch = 0; }
-        }
-
-
+        _camera.fieldOfView = Mathf.Clamp(_carScript.speed / 10.0f + 60.0f, 60, 90.0f);
 
         if (Switch == 0)
         {
-            // Damp angle from current y-angle towards target y-angle
+            // Damp angle from current y-angle towards _target y-angle
 
             float xAngle = Mathf.SmoothDampAngle(transform.eulerAngles.x,
-           target.eulerAngles.x + Angle, ref xVelocity, smooth);
+                _target.eulerAngles.x + Angle, ref xVelocity, smooth);
 
             float yAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y,
-            target.eulerAngles.y, ref yVelocity, smooth);
+                _target.eulerAngles.y, ref yVelocity, smooth);
 
-            // Look at the target
-            transform.eulerAngles = new Vector3(xAngle, yAngle,0.0f);
+            // Look at the _target
+            transform.eulerAngles = new Vector3(xAngle, yAngle, 0.0f);
 
             var direction = transform.rotation * -Vector3.forward;
-            var targetDistance = AdjustLineOfSight(target.position + new Vector3(0, height, 0), direction);
+            var targetDistance = AdjustLineOfSight(_target.position + new Vector3(0, height, 0), direction);
 
 
-            transform.position = target.position + new Vector3(0, height, 0) + direction * targetDistance;
-
-
+            transform.position = _target.position + new Vector3(0, height, 0) + direction * targetDistance;
         }
         else
         {
-
             transform.position = cameraSwitchView[Switch - 1].position;
-            transform.rotation = Quaternion.Lerp(transform.rotation, cameraSwitchView[Switch - 1].rotation, Time.deltaTime * 5.0f);
-
+            transform.rotation = Quaternion.Lerp(transform.rotation, cameraSwitchView[Switch - 1].rotation,
+                Time.deltaTime * 5.0f);
         }
-
     }
-
-
 
     float AdjustLineOfSight(Vector3 target, Vector3 direction)
     {
-
-
-        RaycastHit hit;
-
-        if (Physics.Raycast(target, direction, out hit, distance, lineOfSightMask.value))
+        if (Physics.Raycast(target, direction, out var hit, distance, lineOfSightMask.value))
             return hit.distance;
-        else
-            return distance;
-
+        return distance;
     }
-
-
 }
